@@ -1268,7 +1268,7 @@ function wireLetter(){
 }
 
 function openSheet(d){
-  const c=C[d];
+  const c=C[d]; logView(d,'열림');
   lastFocus=document.activeElement;
   $('sheet-l').textContent=c.l;
   $('sheet-title').textContent=`12.${d} · ${c.k}`;
@@ -1283,7 +1283,7 @@ function openSheet(d){
   if(c.type==='ask') wireAsk(c); else if(c.ask) wireAsk(c.ask);
   wireArt(); wireLetter(); wireCheer(); wireGame();
 }
-function openWall(){
+function openWall(){ logView(12,'열림');
   lastFocus=document.activeElement; sheetDay=null;
   $('sheet-l').textContent='♥'; $('sheet-title').textContent='12.12 · 선물';
   $('sheet-in').classList.remove('lmode'); $('sheet-in').classList.add('dmode');
@@ -1559,7 +1559,7 @@ function wireAsk(c){
     logClick(c.code, choice===null?'none':choice==='free'?'free':c.amt[+choice]);
   };
   if($('buy')) $('buy').onclick=()=>{ const t=(c.buy.contact||'').trim(); if(!t){ toast('작품 구입 문의처는 준비 중이에요'); return; } const el=$('buy-c'); el.innerHTML=t; el.hidden=false; logClick(c.code,'buy'); };
-  $('pay-online').onclick=()=>{ const u=(c.payUrl||'').trim(); if(u){ const a=document.createElement('a'); a.href=u; a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); } else toast('일시후원 페이지는 준비 중이에요. 우선 아래 계좌로 후원해 주세요'); };
+  $('pay-online').onclick=()=>{ logClick(c.code,'온라인 후원'); const u=(c.payUrl||'').trim(); if(u){ const a=document.createElement('a'); a.href=u; a.target='_blank'; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); } else toast('일시후원 페이지는 준비 중이에요. 우선 아래 계좌로 후원해 주세요'); };
   $('acct-x').onclick=()=>{acct.hidden=true;if($('give'))$('give').focus()};
   acct.addEventListener('click',e=>{if(e.target===acct){acct.hidden=true}});
   $('copy').onclick=()=>{
@@ -1771,7 +1771,7 @@ function lockedHTML(d){
   </div>`;
 }
 function openLocked(d){
-  lastFocus=null; sheetDay=null;
+  lastFocus=null; sheetDay=null; logView(d,'잠김');
   $('sheet-l').textContent=C[d].l; $('sheet-title').textContent=`12.${d} · ${C[d].k}`;
   $('sheet-in').classList.remove('dmode'); $('sheet-in').classList.add('lmode');
   $('sheet-in').innerHTML=lockedHTML(d);
@@ -1872,6 +1872,21 @@ function setEditing(on){
     }
   },err=>{});
 })();
+/* ---- 깃허브·재단 주소에서는 구글 시트(앱스크립트)에 저장 ---- */
+const API_URL='https://script.google.com/macros/s/AKfycbxK6ILomOCSdnO-txhreGoi-DWGYOK-7L7nkwRDROALxv7C3FX5af5o3LxDA-VxGsvG/exec'; // 앱스크립트 웹 앱 주소 (배포 후 입력)
+const VID=(()=>{ try{ let v=localStorage.getItem('miracle-vid'); if(!v){ v=Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); localStorage.setItem('miracle-vid',v);} return v; }catch(e){ return 'nostore'; } })();
+let ENTRY_SRC=(()=>{ try{ const q=new URLSearchParams(location.search); return q.get('c')?'QR':'메인'; }catch(e){ return '메인'; } })();
+function api(o){ if(!API_URL) return Promise.reject(new Error('no api')); return fetch(API_URL,{method:'POST',body:JSON.stringify({...o,vid:VID})}).then(r=>r.json()).then(j=>{ if(!j||!j.ok) throw new Error('fail'); return j; }); }
+function slotLabel(d){ if(d===0) return '메인'; if(d===12) return '12/12 배경화면'; if(d===24) return '12/24 완성'; const c=C[d]; return c?`12/${d} ${c.l}`:String(d); }
+function logView(d,screen){ if(!API_URL||(window.claude&&window.claude.use)||PREVIEW_MODE) return; const src=ENTRY_SRC; ENTRY_SRC='캘린더'; api({t:'view',slot:slotLabel(d),screen:screen||'열림',src}).catch(()=>{}); }
+if(API_URL&&!(window.claude&&window.claude.use)){
+  cheerCol={add:d=>api({t:'cheer',slot:d.slot,text:d.text}).then(()=>{ CHEERS.push({slot:d.slot,text:d.text,at:d.at,hidden:false}); drawCheer(); drawGlowCount(); })};
+  clickCol={add:d=>PREVIEW_MODE?Promise.resolve():api({t:'click',slot:d.slot,choice:d.choice})};
+  shareCol={add:d=>PREVIEW_MODE?Promise.resolve():api({t:'share',item:d.item,kw:d.kw})};
+  entryDoc={set:d=>api({t:'entry',name:d.name,tel:d.tel,time:d.time})};
+  fetch(API_URL+'?a=cheers').then(r=>r.json()).then(list=>{ if(Array.isArray(list)){ CHEERS=list.map(x=>({...x,hidden:false})); drawCheer(); drawGlowCount(); } }).catch(()=>{});
+  if(ENTRY_SRC==='메인') setTimeout(()=>logView(0,'첫 화면'),300);
+}
 async function await_user(){try{const u=await window.claude.use('user'); if(!u) return null; return await u.can('data.write')}catch(e){return null}}
 $('edit-toggle').onclick=()=>setEditing(!editing);
 (function(){const t=document.querySelector('.startree');if(t)$('fin-tree').appendChild(t.cloneNode(true))})();
