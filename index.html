@@ -802,7 +802,7 @@ h3.t:empty{display:none}
   <section class="card" id="card" aria-live="polite"></section>
 </main>
 
-<div class="preview">
+<div class="preview" id="preview-box">
   <div class="lbl">미리보기용 '오늘' 날짜 (실제 페이지에는 없는 영역)<br>상세 화면의 사진·문구·금액은 모두 예시입니다</div>
   <div class="days" id="days"></div>
 </div>
@@ -989,7 +989,12 @@ const WALL={d:12,k:'Gift',cardH:'브릿지온 아르떼 휴대폰 배경화면',
 const PHONE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>';
 const KEYS=Object.keys(C).map(Number);
 const PREVIEW=[11,12,...KEYS.filter(k=>k!==11),24];
-let today=17, sel=17, lastFocus=null;
+/* 실제 주소(깃허브·재단)에서는 한국 시간 기준으로 칸이 열림. ?preview=1 이거나 그 밖의 주소(미리보기)에서는 날짜 버튼으로 검토 */
+const PREVIEW_MODE=(()=>{ try{ const q=new URLSearchParams(location.search); if(q.get('preview')==='1') return true; const h=location.hostname; return !(/github\.io$/.test(h)||/miral\.org$/.test(h)); }catch(e){ return true; } })();
+{ const pb=document.getElementById('preview-box'); if(pb&&!PREVIEW_MODE) pb.hidden=true; }
+function realDay(){ const k=new Date(Date.now()+9*3600e3); const y=k.getUTCFullYear(), m=k.getUTCMonth(); if(y<2026||(y===2026&&m<11)) return 0; if(y>2026) return 31; return k.getUTCDate(); }
+let today=PREVIEW_MODE?17:realDay(), sel=17, lastFocus=null;
+if(!PREVIEW_MODE){ const open=[11,12,13,15,17,19,21,23].filter(d=>d<=today); sel=today>=24?24:(open.length?open[open.length-1]:11); }
 const fromHash=parseInt((location.hash.match(/^#d(\d{2})$/)||[])[1],10);
 if(C[fromHash]) sel=fromHash;
 const $=id=>document.getElementById(id);
@@ -1623,7 +1628,6 @@ function flyLetter(d,cell,done){
 }
 
 /* ---- 메인: 남은 시간, 함께 밝힌 불빛, 밤하늘 별 ---- */
-const PREVIEW_MODE=true; // 실제 배포 때는 false (서버 한국 시간 사용)
 function nowKST(){
   const real=new Date(Date.now()+9*3600e3); // KST wall clock in UTC fields
   if(!PREVIEW_MODE) return real;
