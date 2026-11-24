@@ -773,6 +773,26 @@ body.editing .desk .letter .ltext{padding:0;background:none}
 .wl-h{display:block;font-size:12.5px;font-weight:700;color:var(--glow-ink);letter-spacing:.01em;margin-top:10px}
 .wl-q{display:block;font:500 18px/1.5 var(--f-ko);color:var(--night);margin:2px 0 8px;word-break:keep-all}
 h3.t:empty{display:none}
+.sheet .in.lmode{max-width:none;padding:0;gap:0;min-height:calc(100vh - 56px);background:radial-gradient(120% 70% at 50% 30%,#18473D 0%,#0E3530 45%,#08221D 100%)}
+.lockview2{position:relative;min-height:calc(100vh - 56px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;padding:30px max(26px,env(safe-area-inset-left,0px)) calc(36px + env(safe-area-inset-bottom,0px));color:#E9EFEC;overflow:hidden}
+.lv-stars{position:absolute;inset:0;pointer-events:none}
+.lv-stars span{position:absolute;border-radius:50%;background:#F3E6C4}
+.lv-w{position:relative;width:118px;height:156px;border-radius:59px 59px 10px 10px;background:linear-gradient(#123A32,#0F332C);box-shadow:inset 0 0 0 2px rgba(243,217,164,.38),0 0 34px rgba(243,217,164,.14);display:flex;align-items:center;justify-content:center;font:300 54px var(--f-en);color:rgba(243,217,164,.55);margin-bottom:6px}
+.lv-w::after{content:"";position:absolute;left:-18px;right:-18px;bottom:-12px;height:8px;border-radius:3px;background:#173F37}
+.lv-w i{position:absolute;inset:-26px;border-radius:50%;background:radial-gradient(closest-side,rgba(243,217,164,.16),transparent);animation:lvbr 3.2s ease-in-out infinite}
+@keyframes lvbr{50%{opacity:.35}}
+.lv-tag{position:relative;display:inline-block;padding:4px 11px;border-radius:999px;background:rgba(243,217,164,.14);color:var(--glow);font-size:11.5px;font-weight:500;margin-top:6px}
+.lv-k{position:relative;font:500 12px var(--f-en);letter-spacing:.2em;color:var(--mist);margin-top:-6px}
+.lv-t{position:relative;margin:0;font:400 22px/1.45 'Noto Serif KR',serif;color:#F6EBD3}
+.lv-cd{position:relative;display:flex;gap:8px}
+.lv-cd div{width:74px;padding:12px 0 10px;border-radius:14px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(157,184,175,.22);display:flex;flex-direction:column;gap:2px}
+.lv-cd b{font:300 30px/1 var(--f-en);color:var(--glow)}
+.lv-cd span{font-size:11px;color:var(--mist)}
+.lv-note{position:relative;margin:0;font-size:13px;line-height:1.7;color:#C9D6D1}
+.lv-note b{color:var(--glow);font-weight:500}
+.lockview2 .lv-go{position:relative;margin-top:0;background:var(--glow);color:var(--night);font-weight:700;border-radius:14px;padding:14px 26px;box-shadow:0 0 20px rgba(243,217,164,.3)}
+.lv-sm{position:relative;margin:0;font-size:11.5px;color:var(--mist)}
+@media (prefers-reduced-motion:reduce){.lv-w i{animation:none}}
 </style>
 
 <div class="sky" id="sky" aria-hidden="true"></div>
@@ -1255,7 +1275,7 @@ function openSheet(d){
   sheetDay=d;
   if(!PROG.col.includes(d)) pendingFly=d;
   markRead(d);
-  const st=c.type==='story'; $('sheet-in').classList.toggle('dmode',st||!!c.wish);
+  const st=c.type==='story'; $('sheet-in').classList.remove('lmode'); $('sheet-in').classList.toggle('dmode',st||!!c.wish);
   $('sheet-in').innerHTML=st?storyHTML(c,d):c.wish?wishHTML(c,d):litHTML(d)+(c.type==='ask'?askHTML(c,d):reportHTML())+backHTML();
   applyEditable();
   $('sheet').hidden=false; $('sheet').scrollTop=0; document.body.classList.add('lock');
@@ -1266,7 +1286,7 @@ function openSheet(d){
 function openWall(){
   lastFocus=document.activeElement; sheetDay=null;
   $('sheet-l').textContent='♥'; $('sheet-title').textContent='12.12 · 선물';
-  $('sheet-in').classList.add('dmode');
+  $('sheet-in').classList.remove('lmode'); $('sheet-in').classList.add('dmode');
   $('sheet-in').innerHTML=`<header class="dhero nophoto"><div class="dglow" aria-hidden="true"></div><div class="dov"><p class="deye">12월 12일 · 선물</p><h2 class="dt" data-k="WALL.h">${WALL.h}</h2><p class="dsub" data-k="WALL.p">${WALL.p}</p></div></header>
   <div class="dbody"><div class="body"><p data-k="WALL.lead">${WALL.lead}</p></div>
     <p class="wg-note">그림을 누르면 크게 볼 수 있어요</p>
@@ -1738,21 +1758,28 @@ function slotFromURL(){
 }
 function lockedHTML(d){
   const c=C[d];
-  return `<div class="lockview">
-    <div class="lv-win" aria-hidden="true">${c.l}</div>
-    <h3>12월 ${d}일에 열리는 창이에요</h3>
-    <p class="lv-cd" id="lv-cd"></p>
-    <p class="lv-sub">창이 열리면 같은 QR로 다시 찾아와 주세요.</p>
-    <button class="btn" id="lv-go" type="button">지금 열린 창 보러 가기</button>
+  const opened=[11,12,13,15,17,19,21,23].filter(k=>k<=today).length;
+  const tag=c.tag||c.cardTag||'';
+  return `<div class="lockview2"><div class="lv-stars" id="lv-stars" aria-hidden="true"></div>
+    <div class="lv-w" aria-hidden="true"><i></i>${c.l}</div>
+    ${tag?`<span class="lv-tag">${tag}</span>`:''}
+    <div class="lv-k">${c.k.toUpperCase()}</div>
+    <h3 class="lv-t">12월 ${d}일 00시에<br>이 창에 불이 켜져요</h3>
+    <div class="lv-cd" id="lv-cd" aria-live="polite"></div>
+    ${opened?`<p class="lv-note">지금 <b>${opened}개의 창</b>에 불이 켜져 있어요.</p><button class="btn lv-go" id="lv-go" type="button">지금 열린 창 보러 가기</button>`:`<p class="lv-note">첫 창은 <b>12월 11일 00시</b>에 켜져요.</p>`}
+    <p class="lv-sm">창이 열리면 같은 QR로 다시 찾아와 주세요</p>
   </div>`;
 }
 function openLocked(d){
   lastFocus=null; sheetDay=null;
   $('sheet-l').textContent=C[d].l; $('sheet-title').textContent=`12.${d} · ${C[d].k}`;
+  $('sheet-in').classList.remove('dmode'); $('sheet-in').classList.add('lmode');
   $('sheet-in').innerHTML=lockedHTML(d);
-  const upd=()=>{const n=nowKST().getTime(), t=Date.UTC(2026,11,d); let ms=Math.max(0,t-n); const dd=Math.floor(ms/864e5); ms-=dd*864e5; const hh=Math.floor(ms/36e5); ms-=hh*36e5; const mm=Math.floor(ms/6e4); const el=$('lv-cd'); if(el) el.innerHTML=`열리기까지 <b>${dd?dd+'일 ':''}${hh}시간 ${mm}분</b>`};
+  let s=d*7; const r=()=>{s=(s*16807)%2147483647;return s/2147483647}; let h=''; for(let i=0;i<34;i++){const z=r()*2+.6; h+=`<span style="left:${r()*100}%;top:${r()*55}%;width:${z}px;height:${z}px;opacity:${.2+r()*.55}"></span>`} $('lv-stars').innerHTML=h;
+  const p2=n=>String(n).padStart(2,'0');
+  const upd=()=>{const n=nowKST().getTime(), t=Date.UTC(2026,11,d); let ms=Math.max(0,t-n); const dd=Math.floor(ms/864e5); ms-=dd*864e5; const hh=Math.floor(ms/36e5); ms-=hh*36e5; const mm=Math.floor(ms/6e4); const el=$('lv-cd'); if(el) el.innerHTML=`<div><b>${dd}</b><span>일</span></div><div><b>${p2(hh)}</b><span>시간</span></div><div><b>${p2(mm)}</b><span>분</span></div>`};
   upd(); clearInterval(openLocked._t); openLocked._t=setInterval(upd,30000);
-  $('lv-go').onclick=()=>{ clearInterval(openLocked._t); sel=Math.max(...KEYS.filter(k=>k<=today),KEYS[0]); closeSheet(); render(); };
+  if($('lv-go')) $('lv-go').onclick=()=>{ clearInterval(openLocked._t); sel=Math.max(...KEYS.filter(k=>k<=today),KEYS[0]); closeSheet(); render(); };
   $('sheet').hidden=false; $('sheet').scrollTop=0; document.body.classList.add('lock');
 }
 /* ---- 처음 캘린더를 볼 때 한 번 뜨는 안내 ---- */
@@ -1810,7 +1837,7 @@ function applyOverrides(){Object.entries(overrides).forEach(([k,v])=>{try{setPat
 function rerender(){render(); if(sheetDay){const top=$('sheet').scrollTop; openSheetContent(sheetDay); $('sheet').scrollTop=top}}
 function wireArt(){const b=$('art-open'); if(!b) return; b.onclick=()=>{if(editing) return; const c=C[sheetDay]; $('lb-img').src=c.artImg; $('lb-img').alt=c.artCap; $('lb-cap').textContent=c.artCap; $('lb').hidden=false; $('lb-x').focus()}}
 $('lb-x').onclick=()=>{$('lb').hidden=true; const b=$('art-open'); if(b) b.focus()};
-function openSheetContent(d){const c=C[d]; const st=c.type==='story'; $('sheet-in').classList.toggle('dmode',st||!!c.wish); $('sheet-in').innerHTML=st?storyHTML(c,d):c.wish?wishHTML(c,d):litHTML(d)+(c.type==='ask'?askHTML(c,d):reportHTML())+backHTML(); applyEditable(); if(c.type==='ask') wireAsk(c); else if(c.ask) wireAsk(c.ask); wireArt(); wireLetter(); wireCheer(); wireGame()}
+function openSheetContent(d){const c=C[d]; const st=c.type==='story'; $('sheet-in').classList.remove('lmode'); $('sheet-in').classList.toggle('dmode',st||!!c.wish); $('sheet-in').innerHTML=st?storyHTML(c,d):c.wish?wishHTML(c,d):litHTML(d)+(c.type==='ask'?askHTML(c,d):reportHTML())+backHTML(); applyEditable(); if(c.type==='ask') wireAsk(c); else if(c.ask) wireAsk(c.ask); wireArt(); wireLetter(); wireCheer(); wireGame()}
 function toast(msg){const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2000)}
 document.addEventListener('focusout',e=>{
   const el=e.target.closest&&e.target.closest('[data-k]'); if(!el||!editing) return;
@@ -1853,7 +1880,7 @@ $('edit-toggle').onclick=()=>setEditing(!editing);
 (function(){
   const cv=$('cover');
   let skip=false;
-  if(slotFromURL()||location.hash==='#card'||isBG()) skip=true;
+  if(slotFromURL()||location.hash==='#card'||isBG()||isXmas()) skip=true;
   if(skip){ cv.hidden=true; return; }
   document.body.classList.add('lock');
   $('cv-go').onclick=()=>{
@@ -1862,8 +1889,9 @@ $('edit-toggle').onclick=()=>setEditing(!editing);
   };
 })();
 render();
+function isXmas(){ let c=''; try{ c=(new URLSearchParams(location.search).get('c')||'').toUpperCase(); }catch(e){} return c==='24'; }
 function isBG(){ let c=''; try{ c=(new URLSearchParams(location.search).get('c')||'').toUpperCase(); }catch(e){} return c==='BG'||/^#bg$/i.test(location.hash); }
-(function(){ if(isBG()){ sel=12; render(); if(today>=12) setTimeout(openWall,50); return; } if(location.hash==='#card'){ if(today>=23){ setTimeout(openMX,50); } else { sel=23; render(); openLocked(23); } return; } const d=slotFromURL(); if(!d) return; if(PREVIEW_MODE){ /* 미리보기: 선택한 날짜 기준 */ } sel=d; render(); if(d<=today) openSheet(d); else openLocked(d);})();
+(function(){ if(isXmas()){ sel=24; render(); if(today>=24) setTimeout(openFinale,50); return; } if(isBG()){ sel=12; render(); if(today>=12) setTimeout(openWall,50); return; } if(location.hash==='#card'){ if(today>=23){ setTimeout(openMX,50); } else { sel=23; render(); openLocked(23); } return; } const d=slotFromURL(); if(!d) return; if(PREVIEW_MODE){ /* 미리보기: 선택한 날짜 기준 */ } sel=d; render(); if(d<=today) openSheet(d); else openLocked(d);})();
 </script>
 
 </body>
