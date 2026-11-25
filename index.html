@@ -793,6 +793,8 @@ h3.t:empty{display:none}
 .lockview2 .lv-go{position:relative;margin-top:0;background:var(--glow);color:var(--night);font-weight:700;border-radius:14px;padding:14px 26px;box-shadow:0 0 20px rgba(243,217,164,.3)}
 .lv-sm{position:relative;margin:0;font-size:11.5px;color:var(--mist)}
 @media (prefers-reduced-motion:reduce){.lv-w i{animation:none}}
+.big.soon{opacity:.45}
+.lockmsg svg{width:34px;height:34px;color:var(--glow)}
 </style>
 
 <div class="sky" id="sky" aria-hidden="true"></div>
@@ -1019,16 +1021,18 @@ const fromHash=parseInt((location.hash.match(/^#d(\d{2})$/)||[])[1],10);
 if(C[fromHash]) sel=fromHash;
 const $=id=>document.getElementById(id);
 
+function allDone(){ return KEYS.every(d=>PROG.col.includes(d)); }
+function finOpen(){ return today>=24||allDone(); }
 function render(){
   if($('cover')&&!$('cover').hidden) $('cover').querySelector('.cv-msg').innerHTML=PAGE.cover;
   drawCountdown(); drawSky(); drawGlowCount();
   $('lede').innerHTML=PAGE.lede;
-  $('word').innerHTML='MIRACLE'.split('').map((ch,i)=>`<span data-i="${i}" class="${PROG.col.includes(KEYS[i])&&KEYS[i]<=today?'on':''}">${ch}</span>`).join('');
+  $('word').innerHTML='MIRACLE'.split('').map((ch,i)=>`<span data-i="${i}" class="${PROG.col.includes(KEYS[i])?'on':''}">${ch}</span>`).join('');
   drawBadges();
   $('grid').innerHTML=DAYS.map(d=>{
     const c=C[d];
     if(d===24){
-      const open=today>=24;
+      const open=finOpen();
       return `<button class="cell content fin ${open?'open':'locked'} ${sel===24?'sel':''}" data-d="24" aria-label="12월 24일 ${open?'MIRACLE 완성':'잠김'}"><span class="d">24</span>${open?TREE:''}</button>`;
     }
     if(d===WALL.d){
@@ -1038,18 +1042,20 @@ function render(){
     if(!c){
       return `<div class="cell blank" aria-label="12월 ${d}일 선물"><span class="d">${d}</span></div>`;
     }
-    const open=d<=today;
-    return `<button class="cell content ${open?'open':'locked'} ${d===today?'today':''} ${d===sel?'sel':''}" data-d="${d}" aria-label="12월 ${d}일 ${open?c.k:'잠김'}"><span class="d">${d}</span>${open?`<span class="l">${c.l}</span>`:''}</button>`;
+    const open=d<=today||PROG.col.includes(d);
+    return `<button class="cell content ${open?'open':'locked'} ${d===today?'today':''} ${d===sel?'sel':''}" data-d="${d}" aria-label="12월 ${d}일 ${open?c.k:c.k+' 미리 보기'}"><span class="d">${d}</span>${open?`<span class="l">${c.l}</span>`:''}</button>`;
   }).join('');
-  document.querySelectorAll('#grid button').forEach(b=>b.onclick=()=>{const d=+b.dataset.d; if(C[d]&&d<=today&&!PROG.col.includes(d)){ flyLetter(d,b,()=>{sel=d;render();}); return; } sel=d;render();if(sel===24&&today>=24)openFinale()});
+  document.querySelectorAll('#grid button').forEach(b=>b.onclick=()=>{const d=+b.dataset.d; if(C[d]&&d<=today&&!PROG.col.includes(d)){ flyLetter(d,b,()=>{sel=d;render();}); return; } sel=d;render();if(sel===24&&finOpen())openFinale()});
   const c=C[sel], card=$('card');
-  if(sel===24&&today>=24){
-    card.innerHTML=`<div class="top"><span class="big">★</span><span class="meta">12.24 · Merry Christmas</span></div><h2 data-k="FIN.h">${FIN.h}</h2><p data-k="FIN.p">${FIN.p}</p><p class="xm">메리 크리스마스</p>`;
-  }else if(sel===WALL.d&&sel<=today){
+  if(sel===24){
+    if(finOpen()){ card.innerHTML=`<div class="top"><span class="big">★</span><span class="meta">12.24 · Merry Christmas</span></div><h2 data-k="FIN.h">${FIN.h}</h2><p data-k="FIN.p">${FIN.p}</p><button class="btn" id="open-btn" type="button">완성 화면 보기 →</button>`; $('open-btn').onclick=openFinale; }
+    else { const n=KEYS.filter(d=>PROG.col.includes(d)).length; card.innerHTML=`<div class="lockmsg">${TREE}<h2>일곱 창을 모두 열면<br>MIRACLE이 완성돼요</h2><p>지금 <b>${n}</b> / 7개의 창을 열었어요</p></div>`; }
+  }else if(sel===WALL.d){
     card.innerHTML=`<div class="top"><span class="big gico">${PHONE}</span><span class="meta">12.12 · Gift</span></div><span class="ctag">ART GIFT</span><h2 data-k="WALL.cardH">${WALL.cardH||WALL.h}</h2><p data-k="WALL.cardP">${WALL.cardP||WALL.p}</p><button class="btn" id="open-btn" type="button">${WALL.cardB||WALL.b} →</button>`;
     $('open-btn').onclick=openWall;
-  }else if(sel>today){
-    card.innerHTML=`<div class="lockmsg">${LOCK}<h2>12월 ${sel}일에 열립니다</h2><p>조금만 기다려 주세요</p></div>`;
+  }else if(sel>today&&!PROG.col.includes(sel)){
+    card.innerHTML=`<div class="top"><span class="big soon">${c.l}</span><span class="meta">12.${sel} · ${c.k}</span></div>${c.cardTag?`<span class="ctag">${c.cardTag}</span>`:''}<h2>${c.cardH||c.h}</h2><p>12월 ${sel}일에 불이 켜질 창이에요. 먼저 열어 보셔도 좋아요.</p><button class="btn ghost" id="open-btn" type="button">미리 열어보기 →</button>`;
+    $('open-btn').onclick=()=>openSheet(sel);
   }else{
     card.innerHTML=`<div class="top"><span class="big">${c.l}</span><span class="meta">12.${sel} · ${c.k}</span></div>${c.cardTag?`<span class="ctag">${c.cardTag}</span>`:''}<h2 data-k="${sel}.${c.cardH?'cardH':'h'}">${c.cardH||c.h}</h2><p data-k="${sel}.${c.cardP?'cardP':'p'}">${c.cardP||c.p}</p><button class="btn" id="open-btn" type="button">${c.cardB||c.b} →</button>`;
     $('open-btn').onclick=()=>openSheet(sel);
@@ -1136,7 +1142,7 @@ function askHTML(c,d){
     <button class="btn" type="submit">트리에 불 밝히기</button>
     <p class="wnote">이름 없이 소망 문장만 트리에 보여요.</p>
   </form>`:'';
-  const cta=c.wish?'':`<div class="cta"><button class="btn" id="give" type="button">${c.btn||'후원하기'}</button></div>${c.buy?`<div class="dor"><span>또는</span></div><p class="dbuyp" data-k="${d}.buy.lead">${c.buy.lead}</p><button class="btn ghost dbuy" id="buy" type="button">${c.buy.label}</button><p class="dbuyc" id="buy-c" hidden></p>`:''}`;
+  const cta=c.wish?'':`<div class="cta"><button class="btn" id="give" type="button"><span data-k="${d}.btn">${c.btn||'후원하기'}</span></button></div>${c.buy?`<div class="dor"><span>또는</span></div><p class="dbuyp" data-k="${d}.buy.lead">${c.buy.lead}</p><button class="btn ghost dbuy" id="buy" type="button">${c.buy.label}</button><p class="dbuyc" id="buy-c" hidden></p>`:''}`;
   return `<div><div class="eye" data-k="${d}.proj">${c.proj}</div><h3 class="t" data-k="${d}.h">${c.h}</h3></div>
   <p class="why" data-k="${d}.why">${c.why}</p>
   ${uses}
@@ -1147,7 +1153,7 @@ function askHTML(c,d){
       <h4 id="acct-t">후원 방법을 골라 주세요</h4>
       <p class="pick" id="pick" hidden></p>
       <button class="btn online" id="pay-online" type="button">온라인으로 바로 후원하기 →</button>
-      <p class="paynote">카드·계좌이체로 바로 후원할 수 있는 일시후원 페이지로 이동해요.</p>
+      <p class="paynote">온라인을 통한 후원은 12월 23일 후원분까지 2026년 기부금영수증에 반영됩니다.</p>
       <div class="or"><span>또는 계좌로 후원하기</span></div>
       <div class="arow"><span>${ACCT.bank}</span><b id="acct-no">${ACCT.no}</b><span>예금주 ${ACCT.holder}</span></div>
       <button class="btn" id="copy" type="button">계좌번호 복사</button>
@@ -1357,7 +1363,7 @@ function makerHTML(){
   return `<section class="mkl" id="mk">
     <div class="mkl-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
     <h4>2027년의 창에 불을 켜 보세요</h4>
-    <ol class="mkl-steps"><li>이름</li><li>나를 위한 약속</li><li>소중한 사람과의 약속</li><li>이웃과 나눌 약속</li></ol>
+    <ol class="mkl-steps"><li>나를 위한 약속</li><li>소중한 사람과의 약속</li><li>이웃과 나눌 약속</li></ol>
     <button class="btn" id="mk-open" type="button">2027 약속카드 만들기</button>
     <p class="mkl-note">적은 약속은 저장되지 않고, 내 휴대폰에 이미지로만 남아요.</p>
   </section>`;
@@ -1550,7 +1556,7 @@ function wireAsk(c){
     choice=b.dataset.v;
     document.querySelectorAll('.opt').forEach(x=>x.setAttribute('aria-checked',x===b?'true':'false'));
   });
-  if($('give')) $('give').onclick=()=>{
+  if($('give')) $('give').onclick=()=>{ if(editing) return;
     const pk=$('pick');
     if(c.amt&&choice!==null&&choice!=='free'){pk.textContent='선택하신 마음 · '+c.amt[+choice];pk.hidden=false}
     else if(choice==='free'){pk.textContent=c.thanks||'누군가의 \'처음\'에 마음을 보내 주셔서 감사합니다';pk.hidden=false}
@@ -1604,7 +1610,7 @@ let PROG={col:[],read:[],cheer:0,wish:0,badges:[]};
 try{const raw=localStorage.getItem(PKEY); if(raw) PROG=Object.assign(PROG,JSON.parse(raw));}catch(e){}
 function saveProg(){try{localStorage.setItem(PKEY,JSON.stringify(PROG))}catch(e){}}
 let pendingFly=null;
-function collect(d){ if(!PROG.col.includes(d)){PROG.col.push(d); saveProg(); checkBadges();} }
+function collect(d){ if(!PROG.col.includes(d)){PROG.col.push(d); saveProg(); checkBadges(); if(allDone()&&!PROG.finShown){ PROG.finShown=1; saveProg(); setTimeout(()=>{ sel=24; render(); openFinale(); },900); }} }
 function markRead(d){ if(!PROG.read.includes(d)){PROG.read.push(d); saveProg();} }
 function bump(k){ PROG[k]=(PROG[k]||0)+1; saveProg(); checkBadges(); }
 const BADGES=[
@@ -1889,6 +1895,7 @@ if(API_URL&&!(window.claude&&window.claude.use)){
 }
 async function await_user(){try{const u=await window.claude.use('user'); if(!u) return null; return await u.can('data.write')}catch(e){return null}}
 $('edit-toggle').onclick=()=>setEditing(!editing);
+document.addEventListener('keydown',e=>{ const el=e.target; if(editing&&el&&el.closest&&el.closest('button [contenteditable="true"]')&&(e.key===' '||e.key==='Enter')){ e.preventDefault(); e.stopPropagation(); if(e.key===' ') document.execCommand('insertText',false,' '); } },true);
 (function(){const t=document.querySelector('.startree');if(t)$('fin-tree').appendChild(t.cloneNode(true))})();
 
 /* ---- 표지 ---- */
@@ -1906,7 +1913,7 @@ $('edit-toggle').onclick=()=>setEditing(!editing);
 render();
 function isXmas(){ let c=''; try{ c=(new URLSearchParams(location.search).get('c')||'').toUpperCase(); }catch(e){} return c==='24'; }
 function isBG(){ let c=''; try{ c=(new URLSearchParams(location.search).get('c')||'').toUpperCase(); }catch(e){} return c==='BG'||/^#bg$/i.test(location.hash); }
-(function(){ if(isXmas()){ sel=24; render(); if(today>=24) setTimeout(openFinale,50); return; } if(isBG()){ sel=12; render(); if(today>=12) setTimeout(openWall,50); return; } if(location.hash==='#card'){ if(today>=23){ setTimeout(openMX,50); } else { sel=23; render(); openLocked(23); } return; } const d=slotFromURL(); if(!d) return; if(PREVIEW_MODE){ /* 미리보기: 선택한 날짜 기준 */ } sel=d; render(); if(d<=today) openSheet(d); else openLocked(d);})();
+(function(){ if(isXmas()){ sel=24; render(); if(finOpen()) setTimeout(openFinale,50); return; } if(isBG()){ sel=12; render(); setTimeout(openWall,50); return; } if(location.hash==='#card'){ setTimeout(openMX,50); return; } const d=slotFromURL(); if(!d) return; if(PREVIEW_MODE){ /* 미리보기: 선택한 날짜 기준 */ } sel=d; render(); openSheet(d);})();
 </script>
 
 </body>
