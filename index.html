@@ -1194,10 +1194,7 @@ function reportHTML(){
     <p class="lsign"><span data-k="letter.sign">${L.sign}</span><span class="sig" aria-hidden="true">정형석</span></p>
     </div>
   </article></div>
-  <div class="toreport" id="toreport" ${letterOpen?'':'hidden'}>
-    <p data-k="letter.toReport">${L.toReport}</p>
-    <button class="btn" id="report-go" type="button">2026 결과보고 넘겨보기 →</button>
-  </div>`;
+  <div class="toreport" id="toreport" hidden></div>`;
 }
 
 /* ---- 손편지 렌더링 (글자마다 미세한 흔들림·잉크 농도 차이) ---- */
@@ -1268,9 +1265,9 @@ function wireLetter(){
     if(editing) return;
     const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
     env.classList.add('open');
-    setTimeout(()=>{letterOpen=true;$('envwrap').hidden=true;$('desk').hidden=false;$('toreport').hidden=false;$('desk').classList.add('reveal');$('toreport').classList.add('reveal');drawLetter()},reduce?0:1500);
+    setTimeout(()=>{letterOpen=true;$('envwrap').hidden=true;$('desk').hidden=false;$('desk').classList.add('reveal');$('toreport').classList.add('reveal');drawLetter()},reduce?0:1500);
   };
-  $('report-go').onclick=()=>{ if(LETTER.reportUrl) window.open(LETTER.reportUrl,'_blank'); else toast('결과보고 주소는 완성되면 연결됩니다'); };
+  if($('report-go')) $('report-go').onclick=()=>{ if(LETTER.reportUrl) window.open(LETTER.reportUrl,'_blank'); else toast('결과보고 주소는 완성되면 연결됩니다'); };
 }
 
 function openSheet(d){
